@@ -1,15 +1,16 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
 from app.database.mongodb import db_service
 from app.services.camera_service import CameraService
-from app.services.yolo_service import YOLOService
 from app.services.parking_analyzer import ParkingAnalyzer
-from app.config import settings
+from app.services.yolo_service import YOLOService
 
 # Servicios globales
 camera_service = None
@@ -23,7 +24,7 @@ async def broadcast_parking_update(changes: List[dict]):
     message = {
         "type": "parking_update",
         "timestamp": datetime.utcnow().isoformat(),
-        "changes": changes
+        "changes": changes,
     }
 
     dead_connections = []
@@ -59,7 +60,7 @@ async def processing_loop():
                     "zone_id": "zone_1",
                     "type": "parallel",
                     "baseline": [[100, 300], [700, 300]],
-                    "width_meters": 2.5
+                    "width_meters": 2.5,
                 }
             ],
             "detection_params": {
@@ -67,9 +68,9 @@ async def processing_loop():
                 "min_space_length": 4.5,
                 "min_space_width": 2.2,
                 "stationary_threshold": 3.0,
-                "temporal_filter_frames": 30
+                "temporal_filter_frames": 30,
             },
-            "active": True
+            "active": True,
         }
         await db_service.save_config(default_config)
         config = default_config
@@ -80,8 +81,7 @@ async def processing_loop():
     asyncio.create_task(camera_service.start_capture_loop())
 
     yolo_service = YOLOService(
-        model_path=settings.YOLO_MODEL,
-        confidence=config["detection_params"]["yolo_confidence"]
+        model_path=settings.YOLO_MODEL, confidence=config["detection_params"]["yolo_confidence"]
     )
 
     parking_analyzer = ParkingAnalyzer(config)
@@ -101,15 +101,17 @@ async def processing_loop():
 
             # Guardar detecciones en MongoDB
             for vehicle in vehicles:
-                await db_service.upsert_vehicle_detection({
-                    "vehicle_id": vehicle.get("id", 0),
-                    "camera_id": settings.CAMERA_ID,
-                    "class": vehicle["class"],
-                    "bbox": vehicle["bbox"],
-                    "position": vehicle["center"],
-                    "confidence": vehicle["confidence"],
-                    "active": True
-                })
+                await db_service.upsert_vehicle_detection(
+                    {
+                        "vehicle_id": vehicle.get("id", 0),
+                        "camera_id": settings.CAMERA_ID,
+                        "class": vehicle["class"],
+                        "bbox": vehicle["bbox"],
+                        "position": vehicle["center"],
+                        "confidence": vehicle["confidence"],
+                        "active": True,
+                    }
+                )
 
             # Desactivar vehículos que no se vieron recientemente
             await db_service.deactivate_stale_vehicles(settings.CAMERA_ID, threshold_seconds=5)
@@ -126,12 +128,14 @@ async def processing_loop():
                 # Verificar si hubo cambio de estado
                 if space_id in previous_spaces:
                     if previous_spaces[space_id]["status"] != space["status"]:
-                        changes.append({
-                            "space_id": space_id,
-                            "old_status": previous_spaces[space_id]["status"],
-                            "new_status": space["status"],
-                            "confidence": space["confidence"]
-                        })
+                        changes.append(
+                            {
+                                "space_id": space_id,
+                                "old_status": previous_spaces[space_id]["status"],
+                                "new_status": space["status"],
+                                "confidence": space["confidence"],
+                            }
+                        )
 
                 await db_service.upsert_parking_space(space)
                 previous_spaces[space_id] = space
@@ -143,8 +147,7 @@ async def processing_loop():
             await asyncio.sleep(0.1)  # 10 FPS
 
         except Exception as e:
-            await db_service.log("error", "processing_loop",
-                                f"Error in processing loop: {str(e)}")
+            await db_service.log("error", "processing_loop", f"Error in processing loop: {str(e)}")
             await asyncio.sleep(1)
 
 
@@ -181,14 +184,11 @@ app.add_middleware(
 
 # === ENDPOINTS REST ===
 
+
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {
-        "name": "Street Parking Analyzer API",
-        "version": "1.0.0",
-        "status": "running"
-    }
+    return {"name": "Street Parking Analyzer API", "version": "1.0.0", "status": "running"}
 
 
 @app.get("/api/health")
@@ -197,7 +197,13 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow(),
-        "camera_connected": camera_service is not None and camera_service.cap is not None and camera_service.cap.isOpened() if camera_service else False
+        "camera_connected": (
+            camera_service is not None
+            and camera_service.cap is not None
+            and camera_service.cap.isOpened()
+            if camera_service
+            else False
+        ),
     }
 
 
@@ -214,7 +220,7 @@ async def get_parking_spaces(camera_id: str = settings.CAMERA_ID):
         "total": len(spaces),
         "available": available_count,
         "occupied": occupied_count,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow(),
     }
 
 
@@ -251,8 +257,12 @@ async def get_occupancy():
         "available": sum(1 for s in spaces if s.get("status") == "available"),
         "occupied": sum(1 for s in spaces if s.get("status") == "occupied"),
         "uncertain": sum(1 for s in spaces if s.get("status") == "uncertain"),
-        "occupancy_rate": (sum(1 for s in spaces if s.get("status") == "occupied") / len(spaces) * 100) if spaces else 0,
-        "timestamp": datetime.utcnow()
+        "occupancy_rate": (
+            (sum(1 for s in spaces if s.get("status") == "occupied") / len(spaces) * 100)
+            if spaces
+            else 0
+        ),
+        "timestamp": datetime.utcnow(),
     }
 
 
@@ -294,15 +304,13 @@ async def get_logs(level: str = None, limit: int = 100):
 @app.get("/api/vehicles/active")
 async def get_active_vehicles(camera_id: str = settings.CAMERA_ID):
     """Obtener vehículos detectados actualmente"""
-    cursor = db_service.db.vehicle_detections.find({
-        "camera_id": camera_id,
-        "active": True
-    })
+    cursor = db_service.db.vehicle_detections.find({"camera_id": camera_id, "active": True})
     vehicles = await cursor.to_list(length=100)
     return {"vehicles": vehicles, "count": len(vehicles)}
 
 
 # === WEBSOCKET ===
+
 
 @app.websocket("/ws/parking")
 async def websocket_endpoint(websocket: WebSocket):
@@ -312,11 +320,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         # Enviar estado inicial
         spaces = await db_service.get_spaces_by_camera(settings.CAMERA_ID)
-        await websocket.send_json({
-            "type": "initial_state",
-            "spaces": spaces,
-            "timestamp": datetime.utcnow().isoformat()
-        })
+        await websocket.send_json(
+            {"type": "initial_state", "spaces": spaces, "timestamp": datetime.utcnow().isoformat()}
+        )
 
         # Mantener conexión
         while True:
@@ -334,4 +340,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=settings.API_HOST, port=settings.API_PORT)

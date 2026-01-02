@@ -1,7 +1,8 @@
-from typing import List, Dict, Tuple
-import numpy as np
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from typing import Dict, List, Tuple
+
+import numpy as np
 
 
 class ParkingAnalyzer:
@@ -47,8 +48,7 @@ class ParkingAnalyzer:
 
         return filtered_spaces
 
-    def _analyze_parallel_parking(self, vehicles: List[Dict],
-                                  zone: Dict) -> List[Dict]:
+    def _analyze_parallel_parking(self, vehicles: List[Dict], zone: Dict) -> List[Dict]:
         """
         Método de análisis de distancias entre vehículos para estacionamiento paralelo
         """
@@ -67,14 +67,18 @@ class ParkingAnalyzer:
             if i == 0:
                 # Gap antes del primer vehículo
                 gap_start = 0  # Inicio de la zona
-                gap_end = projected_vehicles[0]["position_on_line"] if projected_vehicles else self._get_zone_length(zone)
+                gap_end = (
+                    projected_vehicles[0]["position_on_line"]
+                    if projected_vehicles
+                    else self._get_zone_length(zone)
+                )
             elif i == len(projected_vehicles):
                 # Gap después del último vehículo
                 gap_start = projected_vehicles[-1]["position_on_line"]
                 gap_end = self._get_zone_length(zone)
             else:
                 # Gap entre vehículos
-                gap_start = projected_vehicles[i-1]["position_on_line"]
+                gap_start = projected_vehicles[i - 1]["position_on_line"]
                 gap_end = projected_vehicles[i]["position_on_line"]
 
             gap_length_px = gap_end - gap_start
@@ -82,15 +86,14 @@ class ParkingAnalyzer:
 
             # Verificar si el gap es suficiente para un espacio
             if gap_length_m >= self.min_space_length:
-                space = self._create_space_from_gap(
-                    gap_start, gap_end, zone, "available"
-                )
+                space = self._create_space_from_gap(gap_start, gap_end, zone, "available")
                 spaces.append(space)
 
         return spaces
 
-    def _project_vehicles_to_line(self, vehicles: List[Dict],
-                                  baseline: List[List[float]]) -> List[Dict]:
+    def _project_vehicles_to_line(
+        self, vehicles: List[Dict], baseline: List[List[float]]
+    ) -> List[Dict]:
         """Proyectar vehículos sobre la línea de estacionamiento"""
         projected = []
 
@@ -117,16 +120,19 @@ class ParkingAnalyzer:
 
             max_distance_px = 3 * self.pixels_per_meter  # 3 metros
             if distance_to_line < max_distance_px and 0 <= projection_length <= line_len:
-                projected.append({
-                    **vehicle,
-                    "position_on_line": projection_length,
-                    "distance_to_line": distance_to_line
-                })
+                projected.append(
+                    {
+                        **vehicle,
+                        "position_on_line": projection_length,
+                        "distance_to_line": distance_to_line,
+                    }
+                )
 
         return projected
 
-    def _create_space_from_gap(self, gap_start: float, gap_end: float,
-                              zone: Dict, status: str) -> Dict:
+    def _create_space_from_gap(
+        self, gap_start: float, gap_end: float, zone: Dict, status: str
+    ) -> Dict:
         """Crear objeto de espacio de estacionamiento"""
         # Calcular polígono del espacio
         baseline = zone["baseline"]
@@ -159,14 +165,13 @@ class ParkingAnalyzer:
             "polygon": polygon,
             "dimensions": {
                 "width": zone["width_meters"],
-                "length": (gap_end - gap_start) / self.pixels_per_meter
+                "length": (gap_end - gap_start) / self.pixels_per_meter,
             },
             "confidence": 0.85,  # Calcular basado en detecciones
-            "last_updated": datetime.utcnow()
+            "last_updated": datetime.utcnow(),
         }
 
-    def _analyze_perpendicular_parking(self, vehicles: List[Dict],
-                                      zone: Dict) -> List[Dict]:
+    def _analyze_perpendicular_parking(self, vehicles: List[Dict], zone: Dict) -> List[Dict]:
         """Análisis para estacionamiento perpendicular"""
         # Implementación similar pero proyectando en grid perpendicular
         # TODO: Implementar en fase posterior
@@ -196,7 +201,9 @@ class ParkingAnalyzer:
 
                 most_common_status = max(status_counts, key=status_counts.get)
                 space["status"] = most_common_status
-                space["confidence"] = status_counts[most_common_status] / len(self.space_history[space_id])
+                space["confidence"] = status_counts[most_common_status] / len(
+                    self.space_history[space_id]
+                )
 
             filtered.append(space)
 

@@ -1,6 +1,7 @@
-import cv2
 import asyncio
 from typing import Optional
+
+import cv2
 import numpy as np
 
 
@@ -46,23 +47,24 @@ class CameraService:
         while self.is_running:
             if not self.cap or not self.cap.isOpened():
                 if self.reconnect_attempts < self.max_reconnect_attempts:
-                    await db_service.log("warning", "camera_service",
-                                        "Camera disconnected, attempting reconnection")
+                    await db_service.log(
+                        "warning", "camera_service", "Camera disconnected, attempting reconnection"
+                    )
                     self.reconnect_attempts += 1
                     await asyncio.sleep(5)
                     await self.connect()
                     continue
                 else:
-                    await db_service.log("error", "camera_service",
-                                        "Max reconnection attempts reached")
+                    await db_service.log(
+                        "error", "camera_service", "Max reconnection attempts reached"
+                    )
                     break
 
             ret, frame = self.cap.read()
             if ret:
                 self.latest_frame = frame
             else:
-                await db_service.log("warning", "camera_service",
-                                    "Failed to read frame")
+                await db_service.log("warning", "camera_service", "Failed to read frame")
 
             await asyncio.sleep(frame_interval)
 

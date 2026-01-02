@@ -1,6 +1,7 @@
-from ultralytics import YOLO
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict
+from ultralytics import YOLO
 
 
 class YOLOService:
@@ -17,8 +18,7 @@ class YOLOService:
         self.confidence = confidence
         self.vehicle_classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck en COCO
 
-    async def detect_vehicles(self, frame: np.ndarray,
-                             track: bool = True) -> List[Dict]:
+    async def detect_vehicles(self, frame: np.ndarray, track: bool = True) -> List[Dict]:
         """
         Detectar vehículos en un frame
 
@@ -33,14 +33,17 @@ class YOLOService:
             }
         """
         if track:
-            results = self.model.track(frame, persist=True,
-                                      conf=self.confidence,
-                                      classes=self.vehicle_classes,
-                                      verbose=False)
+            results = self.model.track(
+                frame,
+                persist=True,
+                conf=self.confidence,
+                classes=self.vehicle_classes,
+                verbose=False,
+            )
         else:
-            results = self.model(frame, conf=self.confidence,
-                               classes=self.vehicle_classes,
-                               verbose=False)
+            results = self.model(
+                frame, conf=self.confidence, classes=self.vehicle_classes, verbose=False
+            )
 
         detections = []
         for result in results:
@@ -54,10 +57,10 @@ class YOLOService:
                     "class": self.model.names[cls],
                     "bbox": [float(x1), float(y1), float(x2), float(y2)],
                     "confidence": conf,
-                    "center": [float((x1 + x2) / 2), float((y1 + y2) / 2)]
+                    "center": [float((x1 + x2) / 2), float((y1 + y2) / 2)],
                 }
 
-                if track and hasattr(box, 'id') and box.id is not None:
+                if track and hasattr(box, "id") and box.id is not None:
                     detection["id"] = int(box.id[0])
 
                 detections.append(detection)
