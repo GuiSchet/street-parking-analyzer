@@ -1,4 +1,5 @@
 import { Stage, Layer } from 'react-konva';
+import PropTypes from 'prop-types';
 import ParkingSpace from './ParkingSpace';
 
 const ParkingMap = ({ spaces, width = 800, height = 600 }) => {
@@ -17,6 +18,16 @@ const ParkingMap = ({ spaces, width = 800, height = 600 }) => {
       </Stage>
     </div>
   );
+};
+
+ParkingMap.propTypes = {
+  spaces: PropTypes.arrayOf(
+    PropTypes.shape({
+      space_id: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  width: PropTypes.number,
+  height: PropTypes.number,
 };
 
 export default ParkingMap;

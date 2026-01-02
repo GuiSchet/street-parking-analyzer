@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import PropTypes from 'prop-types';
 
 const SpaceList = ({ spaces }) => {
   const getStatusColor = (status) => {
@@ -49,6 +50,20 @@ const SpaceList = ({ spaces }) => {
       </div>
     </div>
   );
+};
+
+SpaceList.propTypes = {
+  spaces: PropTypes.arrayOf(
+    PropTypes.shape({
+      space_id: PropTypes.string.isRequired,
+      status: PropTypes.string.isRequired,
+      confidence: PropTypes.number.isRequired,
+      dimensions: PropTypes.shape({
+        length: PropTypes.number,
+        width: PropTypes.number,
+      }),
+    })
+  ).isRequired,
 };
 
 export default SpaceList;

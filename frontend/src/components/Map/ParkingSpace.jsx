@@ -1,5 +1,6 @@
 import { Line, Text } from 'react-konva';
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const ParkingSpace = ({ space }) => {
   const [hovered, setHovered] = useState(false);
@@ -45,6 +46,17 @@ const ParkingSpace = ({ space }) => {
       )}
     </>
   );
+};
+
+ParkingSpace.propTypes = {
+  space: PropTypes.shape({
+    space_id: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    confidence: PropTypes.number.isRequired,
+    polygon: PropTypes.arrayOf(
+      PropTypes.arrayOf(PropTypes.number)
+    ).isRequired,
+  }).isRequired,
 };
 
 export default ParkingSpace;

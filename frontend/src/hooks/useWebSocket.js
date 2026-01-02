@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 export const useWebSocket = (url) => {
   const [data, setData] = useState(null);
@@ -6,7 +6,7 @@ export const useWebSocket = (url) => {
   const ws = useRef(null);
   const reconnectTimeout = useRef(null);
 
-  const connect = () => {
+  const connect = useCallback(() => {
     ws.current = new WebSocket(url);
 
     ws.current.onopen = () => {
@@ -33,7 +33,7 @@ export const useWebSocket = (url) => {
         connect();
       }, 3000);
     };
-  };
+  }, [url]);
 
   useEffect(() => {
     connect();
@@ -46,7 +46,7 @@ export const useWebSocket = (url) => {
         ws.current.close();
       }
     };
-  }, [url]);
+  }, [connect]);
 
   return { data, connected };
 };

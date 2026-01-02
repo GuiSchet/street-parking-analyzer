@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import PropTypes from 'prop-types';
 
 const Stats = ({ stats }) => {
   const occupancyRate = stats.total > 0
@@ -83,6 +84,14 @@ const Stats = ({ stats }) => {
       </motion.div>
     </div>
   );
+};
+
+Stats.propTypes = {
+  stats: PropTypes.shape({
+    total: PropTypes.number.isRequired,
+    available: PropTypes.number.isRequired,
+    occupied: PropTypes.number.isRequired,
+  }).isRequired,
 };
 
 export default Stats;
