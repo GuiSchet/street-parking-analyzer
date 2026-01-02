@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: parking_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: parking_analyzer
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - parking_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: parking_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/parking_analyzer?authSource=admin
+      DB_NAME: parking_analyzer
+      CAMERA_URL: ${CAMERA_URL:-rtsp://192.168.1.100:554/stream}
+      CAMERA_ID: cam_001
+      YOLO_MODEL: yolov8n.pt
+      CONFIDENCE_THRESHOLD: 0.5
+      PROCESSING_FPS: 10
+      CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - parking_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  parking_network:
+    driver: bridge
